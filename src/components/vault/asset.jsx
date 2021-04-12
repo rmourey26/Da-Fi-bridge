@@ -225,19 +225,34 @@ class Asset extends Component {
           <div className={classes.headingEarning}>
             <Typography variant={ 'h5' } className={ classes.grey }>Yearly Growth:</Typography>
             <div className={ classes.flexy }>
-              <Typography variant={ 'h4' } noWrap>{ (this._getAPY(asset)/1).toFixed(2) }% </Typography>
+              <Typography variant={ 'h4' } noWrap>
+                { ['LINK', 'DAI', 'ETH', 'WETH', 'YFI'].includes(asset.id) 
+                  ? "Not Available" 
+                  : `${(this._getAPY(asset)/1).toFixed(2)}%`
+                }
+              </Typography>
             </div>
           </div>
           <div className={classes.headingEarning}>
             <Typography variant={ 'h5' } className={ classes.grey }>Monthly Growth:</Typography>
             <div className={ classes.flexy }>
-              <Typography variant={ 'h4' } noWrap>{ (this._getAPY(asset)/12).toFixed(2) }% </Typography>
+              <Typography variant={ 'h4' } noWrap>
+                { ['LINK', 'DAI', 'ETH', 'WETH', 'YFI'].includes(asset.id) 
+                  ? "Not Available" 
+                  : `${(this._getAPY(asset)/12).toFixed(2)}%`
+                }
+              </Typography>
             </div>
           </div>
           <div className={classes.headingEarning}>
             <Typography variant={ 'h5' } className={ classes.grey }>Weekly Growth:</Typography>
             <div className={ classes.flexy }>
-              <Typography variant={ 'h4' } noWrap>{ (this._getAPY(asset)/52).toFixed(2) }% </Typography>
+              <Typography variant={ 'h4' } noWrap>
+                { ['LINK', 'DAI', 'ETH', 'WETH', 'YFI'].includes(asset.id) 
+                  ? "Not Available" 
+                  : `${(this._getAPY(asset)/52).toFixed(2)}%`
+                }
+              </Typography>
             </div>
           </div>
           <div className={ classes.fullWidth }></div>
@@ -435,11 +450,11 @@ class Asset extends Component {
                 </Button>
               }
             </div>
-            { asset.symbol === 'DAI' &&
+            { ['DAI', 'ETH', 'WETH'].includes(asset.symbol) &&
               <div className={classes.disabledContainer}>
                 <Typography variant='h4'>
                   <WarningIcon fontSize="small" style={{ marginBottom: '-5px' }} />
-                  Withdrawals might be subject to high slippage due to recent large <a className={classes.link} href="https://etherscan.io/tx/0x7207d444430344d4d8384d4dd8c12a8a343c9c01ccdb17c8962b84f40955c59f" target="_blank" rel="noopener noreferrer">withdrawal</a>
+                  Your tokens can be safely withdrawn, now
                 </Typography>
               </div>
             }
