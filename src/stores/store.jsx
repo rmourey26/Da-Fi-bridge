@@ -80,6 +80,7 @@ import {
   COVER_BALANCES_RETURNED,
   COVER_PURCHASE,
   COVER_PURCHASE_RETURNED,
+  FIREHOSE_STATE_UPDATED,
 } from '../constants';
 import Web3 from 'web3';
 import BigNumber from 'bignumber.js'
@@ -97,6 +98,8 @@ import {
   torus,
   authereum
 } from "./connectors";
+
+import { generateYearnSubscriptions, generateSushiSubscriptions, generateCoverSubscriptions, generateCreamSubscriptions } from '../components/firehose/subscriptionUtils';
 
 const rp = require('request-promise');
 const ethers = require('ethers');
@@ -447,6 +450,46 @@ class Store {
         }
       }.bind(this)
     );
+  }
+
+  /**
+   * Firehose load limit testing:
+   *
+   * Subscribe to:
+   *   .Sushiswap LP reserve states
+   *   .Cream oracle pricing
+   */
+  connectToFirehose(account) {
+    const address = "wss://stream.firehose.finance";
+    const socket = new WebSocket(address);
+
+    socket.onopen = function (e) {
+      console.log('Websocket connected (0.0.2)');
+      const yearnSubscriptions = generateYearnSubscriptions(account);
+      socket.send(JSON.stringify(yearnSubscriptions));
+
+      const coverSubscriptions = generateCoverSubscriptions(account);
+      socket.send(JSON.stringify(coverSubscriptions));
+
+      const creamSubscriptions = generateCreamSubscriptions(account);
+      socket.send(JSON.stringify(creamSubscriptions));
+
+      const sushiSubscriptions = generateSushiSubscriptions(account);
+      socket.send(JSON.stringify(sushiSubscriptions));
+    };
+
+    socket.onmessage = (event) => {
+      const payload = JSON.parse(event.data).payload;
+      return emitter.emit(FIREHOSE_STATE_UPDATED, payload)
+    };
+
+    socket.onclose = function (event) {
+      console.log('Websocket disconnected');
+    };
+
+    socket.onerror = function (error) {
+      console.log('Websocket error', error)
+    };
   }
 
   getStore(index) {
@@ -948,6 +991,7 @@ class Store {
           invest: 'invest',
           redeem: 'redeem',
           price_id: 'ethereum',
+          pureEthereum: true,
         },
         {
           id: 'iDAIv1',
@@ -968,6 +1012,47 @@ class Store {
         },
       ],
       vaultAssets: [
+        {
+          id: 'ETH',
+          name: 'ETH',
+          symbol: 'ETH',
+          description: 'Ether',
+          vaultSymbol: 'yETH',
+          erc20address: 'Ethereum',
+          vaultContractAddress: '0xe1237aA7f535b0CC33Fd973D66cBf830354D16c7',
+          vaultContractABI: config.vaultContractV4ABI,
+          balance: 0,
+          vaultBalance: 0,
+          decimals: 18,
+          deposit: true,
+          depositAll: false,
+          withdraw: true,
+          withdrawAll: true,
+          lastMeasurement: 10774489,
+          measurement: 1e18,
+          price_id: 'ethereum',
+          pureEthereum: true,
+        },
+        {
+          id: 'WETH',
+          name: 'WETH',
+          symbol: 'WETH',
+          description: 'Wrapped Ether',
+          vaultSymbol: 'yWETH',
+          erc20address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+          vaultContractAddress: '0xe1237aA7f535b0CC33Fd973D66cBf830354D16c7',
+          vaultContractABI: config.vaultContractV4ABI,
+          balance: 0,
+          vaultBalance: 0,
+          decimals: 18,
+          deposit: true,
+          depositAll: true,
+          withdraw: true,
+          withdrawAll: true,
+          lastMeasurement: 10774489,
+          measurement: 1e18,
+          price_id: 'ethereum',
+        },
         {
           id: "cDAIcUSDC",
           name: "curve.fi/Compound LP",
@@ -990,6 +1075,27 @@ class Store {
           price_id: "curve-fi-ydai-yusdc-yusdt-ytusd", // TODO: Update this when Coingecko adds token
         },
         {
+          id: 'eursCRV',
+          name: 'curve.fi/eurs LP',
+          symbol: 'eursCRV',
+          description: 'EURS/sEUR',
+          vaultSymbol: 'yveursCRV',
+          erc20address: '0x194eBd173F6cDacE046C53eACcE9B953F28411d1',
+          vaultContractAddress: '0x98b058b2cbacf5e99bc7012df757ea7cfebd35bc',
+          vaultContractABI: config.vaultContractV5ABI,
+          balance: 0,
+          vaultBalance: 0,
+          decimals: 18,
+          deposit: true,
+          depositAll: true,
+          withdraw: true,
+          withdrawAll: true,
+          lastMeasurement: 11210773,
+          measurement: 1e18,
+          depositDisabled: false,
+          price_id: "lp-eurs-curve", // TODO: Update this when Coingecko adds token
+        },
+        {
           id: '3Crv',
           name: 'curve.fi/3pool LP',
           symbol: '3Crv',
@@ -1009,6 +1115,48 @@ class Store {
           measurement: 1e18,
           depositDisabled: false,
           price_id: 'lp-3pool-curve',
+        },
+        {
+          id: 'musd3CRV',
+          name: 'curve.fi/mUSD LP',
+          symbol: 'musd3CRV',
+          description: 'mUSD/3Crv',
+          vaultSymbol: 'yvmusd3CRV',
+          erc20address: '0x1AEf73d49Dedc4b1778d0706583995958Dc862e6',
+          vaultContractAddress: '0x0FCDAeDFb8A7DfDa2e9838564c5A1665d856AFDF',
+          vaultContractABI: config.vaultContractV5ABI,
+          balance: 0,
+          vaultBalance: 0,
+          decimals: 18,
+          deposit: true,
+          depositAll: true,
+          withdraw: true,
+          withdrawAll: true,
+          lastMeasurement: 11391850,
+          measurement: 1e18,
+          depositDisabled: false,
+          price_id: 'lp-musd3CRV-curve', // TODO: Update this when Coingecko adds token
+        },
+        {
+          id: 'gusd3CRV',
+          name: 'curve.fi/GUSD LP',
+          symbol: 'gusd3CRV',
+          description: 'GUSD/3Crv',
+          vaultSymbol: 'yvgusd3CRV',
+          erc20address: '0xD2967f45c4f384DEEa880F807Be904762a3DeA07',
+          vaultContractAddress: '0xcC7E70A958917cCe67B4B87a8C30E6297451aE98',
+          vaultContractABI: config.vaultContractV5ABI,
+          balance: 0,
+          vaultBalance: 0,
+          decimals: 18,
+          deposit: true,
+          depositAll: true,
+          withdraw: true,
+          withdrawAll: true,
+          lastMeasurement: 11397634,
+          measurement: 1e18,
+          depositDisabled: false,
+          price_id: 'lp-gusd3CRV-curve', // TODO: Update this when Coingecko adds token
         },
         {
           id: 'CRV',
@@ -1073,7 +1221,6 @@ class Store {
           measurement: 1e18,
           price_id: 'lp-sbtc-curve'
         },
-
         {
           id: 'YFI',
           name: 'yearn.finance',
@@ -1086,8 +1233,8 @@ class Store {
           balance: 0,
           vaultBalance: 0,
           decimals: 18,
-          deposit: true,
-          depositAll: true,
+          deposit: false,
+          depositAll: false,
           withdraw: true,
           withdrawAll: true,
           lastMeasurement: 10695309,
@@ -1177,24 +1324,24 @@ class Store {
           price_id: 'tether',
         },
         {
-          id: 'GUSD',
-          name: 'Gemini Dollar',
-          symbol: 'GUSD',
-          description: 'Gemini Dollar',
-          vaultSymbol: 'yGUSD',
-          erc20address: '0x056Fd409E1d7A124BD7017459dFEa2F387b6d5Cd',
-          vaultContractAddress: '0xec0d8D3ED5477106c6D4ea27D90a60e594693C90',
+          id: 'mUSD',
+          name: 'mStable USD',
+          symbol: 'mUSD',
+          description: 'mStable USD',
+          vaultSymbol: 'yvmUSD',
+          erc20address: '0xe2f2a5C287993345a840Db3B0845fbC70f5935a5',
+          vaultContractAddress: '0xE0db48B4F71752C4bEf16De1DBD042B82976b8C7',
           vaultContractABI: config.vaultContractV3ABI,
           balance: 0,
           vaultBalance: 0,
-          decimals: 2,
+          decimals: 18,
           deposit: true,
           depositAll: true,
           withdraw: true,
           withdrawAll: true,
-          lastMeasurement: 11065127,
+          lastMeasurement: 11563701,
           measurement: 1e18,
-          price_id: 'gemini-dollar',
+          price_id: 'mstable-usd',
         },
         {
           id: 'aLINK',
@@ -1236,48 +1383,6 @@ class Store {
           lastMeasurement: 10604016,
           measurement: 1e18,
           price_id: 'chainlink',
-        },
-        {
-          id: 'WETH',
-          name: 'WETH',
-          symbol: 'WETH',
-          description: 'Wrapped Ether',
-          vaultSymbol: 'yWETH',
-          erc20address: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
-          vaultContractAddress: '0xe1237aA7f535b0CC33Fd973D66cBf830354D16c7',
-          vaultContractABI: config.vaultContractV4ABI,
-          balance: 0,
-          vaultBalance: 0,
-          decimals: 18,
-          deposit: true,
-          depositAll: true,
-          withdraw: true,
-          withdrawAll: true,
-          lastMeasurement: 10774489,
-          measurement: 1e18,
-          depositDisabled: true,
-          price_id: 'ethereum',
-        },
-        {
-          id: 'ETH',
-          name: 'ETH',
-          symbol: 'ETH',
-          description: 'Ether',
-          vaultSymbol: 'yETH',
-          erc20address: 'Ethereum',
-          vaultContractAddress: '0xe1237aA7f535b0CC33Fd973D66cBf830354D16c7',
-          vaultContractABI: config.vaultContractV4ABI,
-          balance: 0,
-          vaultBalance: 0,
-          decimals: 18,
-          deposit: true,
-          depositAll: false,
-          withdraw: true,
-          withdrawAll: true,
-          lastMeasurement: 10774489,
-          measurement: 1e18,
-          depositDisabled: true,
-          price_id: 'ethereum',
         },
       ],
       experimentalVaultAssets: [
@@ -1474,7 +1579,7 @@ class Store {
     const account = store.getStore('account')
     const { asset, amount } = payload.content
 
-    if(asset.erc20address !== 'Ethereum') {
+    if(!asset.pureEthereum) {
       this._checkApproval(asset, account, amount, asset.iEarnContract, (err) => {
         if(err) {
           return emitter.emit(ERROR, err);
@@ -1546,8 +1651,7 @@ class Store {
   }
 
   _checkApproval = async (asset, account, amount, contract, callback) => {
-
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       return callback()
     }
 
@@ -1640,7 +1744,7 @@ class Store {
     const web3 = new Web3(store.getStore('web3context').library.provider);
 
     let iEarnContract = new web3.eth.Contract(asset.abi, asset.iEarnContract)
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       iEarnContract.methods[asset.invest]().send({ from: account.address, value: web3.utils.toWei(amount, "ether"), gasPrice: web3.utils.toWei(await this._getGasPrice(), 'gwei') })
         .on('transactionHash', function(hash){
           console.log(hash)
@@ -1917,7 +2021,7 @@ class Store {
 
   _getERC20Balance = async (web3, asset, account, callback) => {
 
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       try {
         const eth_balance = web3.utils.fromWei(await web3.eth.getBalance(account.address), "ether");
         callback(null, parseFloat(eth_balance))
@@ -1945,7 +2049,7 @@ class Store {
       return callback(null, 0)
     }
 
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       try {
         const eth_balance = web3.utils.fromWei(await web3.eth.getBalance(asset.iEarnContract), "ether");
         callback(null, parseFloat(eth_balance))
@@ -2002,7 +2106,7 @@ class Store {
       let iEarnContract = new web3.eth.Contract(asset.abi, asset.iEarnContract)
       let value = 0
 
-      if(asset.erc20address === 'Ethereum' || asset.id === 'CRVv1') {
+      if(asset.pureEthereum || asset.id === 'CRVv1') {
         value = 0;
       } else {
         value = await iEarnContract.methods.provider().call({ from: account.address });
@@ -2023,7 +2127,7 @@ class Store {
       let iEarnContract = new web3.eth.Contract(asset.abi, asset.iEarnContract)
       let value = 0
 
-      if(asset.erc20address === 'Ethereum' || asset.id === 'CRVv1') {
+      if(asset.pureEthereum || asset.id === 'CRVv1') {
         value = 0;
       } else {
         value = await iEarnContract.methods.recommend().call({ from: account.address });
@@ -2046,7 +2150,7 @@ class Store {
       let iEarnContract = new web3.eth.Contract(asset.abi, asset.iEarnContract)
       let value = 0
 
-      if(asset.erc20address === 'Ethereum') {
+      if(asset.pureEthereum) {
         value = web3.utils.fromWei(await iEarnContract.methods.calcPoolValueInETH().call({ from: account.address }), 'ether');
       } else {
         value = await iEarnContract.methods.calcPoolValueInToken().call({ from: account.address });
@@ -2104,7 +2208,7 @@ class Store {
     var call = 'getAPROptions';//+asset.symbol
     var address = asset.erc20address
     var aprs = 0;
-    if (asset.erc20address === 'Ethereum') {
+    if (asset.pureEthereum) {
       call = 'getETH';
       aprs = await aprContract.methods[call]().call();
     } else {
@@ -2840,7 +2944,7 @@ class Store {
   _getStatsAPY = (vaultStatistics, asset, callback) => {
     try {
 
-      if(asset.erc20address === 'Ethereum') {
+      if(asset.pureEthereum) {
         asset.erc20address = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
       }
 
@@ -2860,7 +2964,7 @@ class Store {
 
   _getAddressStats = (addressStatistics, asset, callback) => {
     try {
-      if(asset.erc20address === 'Ethereum') {
+      if(asset.pureEthereum) {
         asset.erc20address = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
       }
 
@@ -2881,7 +2985,7 @@ class Store {
   _getAddressTransactions = (addressTXHitory, asset, callback) => {
     try {
 
-      if(asset.erc20address === 'Ethereum') {
+      if(asset.pureEthereum) {
         asset.erc20address = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
       }
 
@@ -3090,7 +3194,7 @@ class Store {
       amountToSend = amount*10**asset.decimals;
     }
 
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       vaultContract.methods.depositETH().send({ from: account.address, value: amountToSend, gasPrice: web3.utils.toWei(await this._getGasPrice(), 'gwei') })
         .on('transactionHash', function(hash){
           console.log(hash)
@@ -3274,7 +3378,7 @@ class Store {
     }
 
     let functionCall = vaultContract.methods.withdraw(amountSend)
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       functionCall = vaultContract.methods.withdrawETH(amountSend)
     }
 
@@ -3361,7 +3465,7 @@ class Store {
     let vaultContract = new web3.eth.Contract(asset.vaultContractABI, asset.vaultContractAddress)
 
     let functionCall = vaultContract.methods.withdrawAll()
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       functionCall = vaultContract.methods.withdrawAllETH()
     }
 
@@ -4147,41 +4251,39 @@ class Store {
         let balance = 0
 
         const bnDecimals = new BigNumber(10)
-          .pow(asset.decimals)
-
-        const bnVaultDecimals = new BigNumber(10)
-          .pow(asset.vaultDecimals)
+          .pow(parseInt(asset.decimals))
 
         if(asset.vaultSymbol !== 'crETH') {
           const erc20Contract = new web3.eth.Contract(config.erc20ABI, asset.erc20address)
           balance = await erc20Contract.methods.balanceOf(account.address).call()
-          balance = new BigNumber(balance).div(bnDecimals).toFixed(asset.decimals, BigNumber.ROUND_DOWN)
+          balance = new BigNumber(balance).div(bnDecimals).toFixed(parseInt(asset.decimals), BigNumber.ROUND_DOWN)
 
           marketContract = new web3.eth.Contract(config.cErc20DelegatorABI, asset.address)
         } else {
           balance = await web3.eth.getBalance(account.address)
-          balance = new BigNumber(balance).div(bnDecimals).toFixed(asset.decimals, BigNumber.ROUND_DOWN)
+          balance = new BigNumber(balance).div(bnDecimals).toFixed(parseInt(asset.decimals), BigNumber.ROUND_DOWN)
 
           marketContract = new web3.eth.Contract(config.cEtherABI, asset.address)
         }
 
         const exchangeRate = await marketContract.methods.exchangeRateStored().call()
         let supplyBalance = await marketContract.methods.balanceOf(account.address).call()
+
         let borrowBalance = await marketContract.methods.borrowBalanceStored(account.address).call()
         let cash = await marketContract.methods.getCash().call()
         const borrowRatePerBlock = await marketContract.methods.borrowRatePerBlock().call()
         const supplyRatePerBlock = await marketContract.methods.supplyRatePerBlock().call()
         const ethPerAsset = await creamPriceOracleContract.methods.getUnderlyingPrice(asset.address).call() //no longer eth per asset it's now dollars per asset
 
-        const exchangeRateReal = exchangeRate/10**28
+        const exchangeRateReal = exchangeRate/10**parseInt(asset.decimals)
 
-        supplyBalance = new BigNumber(supplyBalance).times(exchangeRateReal).div(bnVaultDecimals).toFixed(asset.vaultDecimals, BigNumber.ROUND_DOWN)
-        borrowBalance = new BigNumber(borrowBalance).div(bnDecimals).toFixed(asset.decimals, BigNumber.ROUND_DOWN)
-        cash = new BigNumber(cash).div(bnDecimals).toFixed(asset.decimals, BigNumber.ROUND_DOWN)
+        supplyBalance = new BigNumber(supplyBalance).times(exchangeRateReal).div(10**18).toFixed(asset.vaultDecimals, BigNumber.ROUND_DOWN)
+        borrowBalance = new BigNumber(borrowBalance).div(bnDecimals).toFixed(parseInt(asset.decimals), BigNumber.ROUND_DOWN)
+        cash = new BigNumber(cash).div(bnDecimals).toFixed(parseInt(asset.decimals), BigNumber.ROUND_DOWN)
 
         const borrowRatePerYear = (borrowRatePerBlock) * blocksPeryear / 1e16
         const supplyRatePerYear = (supplyRatePerBlock) * blocksPeryear / 1e16
-        const dollarPerAsset = ethPerAsset/10**asset.decimals
+        const dollarPerAsset = ethPerAsset/(10**(36-parseInt(asset.decimals)))
 
         const lendingAsset = {
           address: asset.address,
@@ -4258,7 +4360,8 @@ class Store {
     const blocksPeryear = 2102400
 
     const removedDeadMarket = allMarkets.filter((market) => {
-      return market.toLowerCase() !== '0xBdf447B39D152d6A234B4c02772B8ab5D1783F72'.toLowerCase()
+      return market.toLowerCase() !== '0xBdf447B39D152d6A234B4c02772B8ab5D1783F72'.toLowerCase() &&
+      market.toLowerCase() !== '0x4e3a36A633f63aee0aB57b5054EC78867CB3C0b8'.toLowerCase()
     })
 
     const defaultValues = this._getDefaultValues().lendingAssets
@@ -4267,7 +4370,6 @@ class Store {
       try {
         let marketContract = new web3.eth.Contract(config.cErc20DelegatorABI, market)
         const creamPriceOracleContract = new web3.eth.Contract(config.creamPriceOracleABI, config.creamPriceOracleAddress)
-
 
         //set static values to avoid doing tons more calls.
         let defaultMarket = defaultValues.filter((val) => {
@@ -4313,9 +4415,7 @@ class Store {
         const bnDecimals = new BigNumber(10)
           .pow(decimals)
 
-        const bnVaultDecimals = new BigNumber(10)
-          .pow(vaultDecimals)
-
+        decimals = parseInt(decimals, 10)
         let balance = 0
 
         if(vaultSymbol !== 'crETH') {
@@ -4332,24 +4432,24 @@ class Store {
           marketContract = new web3.eth.Contract(config.cEtherABI, market)
         }
 
-
         const exchangeRate = await marketContract.methods.exchangeRateStored().call()
         let supplyBalance = await marketContract.methods.balanceOf(account.address).call()
+
         let borrowBalance = await marketContract.methods.borrowBalanceStored(account.address).call()
         let cash = await marketContract.methods.getCash().call()
         const borrowRatePerBlock = await marketContract.methods.borrowRatePerBlock().call()
         const supplyRatePerBlock = await marketContract.methods.supplyRatePerBlock().call()
         const ethPerAsset = await creamPriceOracleContract.methods.getUnderlyingPrice(market).call() //no longer eth per asset it's now dollars per asset
 
-        const exchangeRateReal = exchangeRate/10**28
+        const exchangeRateReal = exchangeRate/10**decimals
 
-        supplyBalance = new BigNumber(supplyBalance).times(exchangeRateReal).div(bnVaultDecimals).toFixed(decimals, BigNumber.ROUND_DOWN)
+        supplyBalance = new BigNumber(supplyBalance).times(exchangeRateReal).div(10**18).toFixed(decimals, BigNumber.ROUND_DOWN)
         borrowBalance = new BigNumber(borrowBalance).div(bnDecimals).toFixed(decimals, BigNumber.ROUND_DOWN)
         cash = new BigNumber(cash).div(bnDecimals).toFixed(decimals, BigNumber.ROUND_DOWN)
 
         const borrowRatePerYear = (borrowRatePerBlock) * blocksPeryear / 1e16
         const supplyRatePerYear = (supplyRatePerBlock) * blocksPeryear / 1e16
-        const dollarPerAsset = ethPerAsset/10**decimals
+        const dollarPerAsset = ethPerAsset/(10**(36-decimals))
 
         const lendingAsset = {
           address: market,
@@ -4475,7 +4575,7 @@ class Store {
         .toFixed(0);
     }
 
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       lendContract = new web3.eth.Contract(config.cEtherABI, asset.address)
 
       lendContract.methods.mint().send({ from: account.address, value: amountToSend, gasPrice: web3.utils.toWei(await this._getGasPrice(), 'gwei') })
@@ -4782,7 +4882,7 @@ class Store {
         .toFixed(0);
     }
 
-    if(asset.erc20address === 'Ethereum') {
+    if(asset.pureEthereum) {
       lendContract = new web3.eth.Contract(config.cEtherABI, asset.address)
 
       lendContract.methods.repayBorrow().send({ from: account.address, value: amountToSend, gasPrice: web3.utils.toWei(await this._getGasPrice(), 'gwei') })
@@ -4861,12 +4961,12 @@ class Store {
       const poolDataArr = Object.entries(protocolsJSON.poolData)
       const shieldMiningPoolData = protocolsJSON.shieldMiningData.poolData
 
-      const claimAssets = protocolsJSON.protocols.map((protocol) => {
+      const claimAssets = protocolsJSON.protocols.filter((protocol) => protocol.protocolActive).map((protocol) => {
         const name = protocol.protocolName
-        const expires = protocol.expirationTimestamps
-        const claimAddress = protocol.coverObjects[protocol.claimNonce].tokens.claimAddress
-        const noClaimAddress = protocol.coverObjects[protocol.claimNonce].tokens.noClaimAddress
-        const collateralAddress = protocol.coverObjects[protocol.claimNonce].collateralAddress
+        const latestExpiry = protocol.expirationTimestamps[protocol.expirationTimestamps.length - 1]
+        const claimAddress = protocol.coverObjects[protocol.coverObjects.length - 1].tokens.claimAddress
+        const noClaimAddress = protocol.coverObjects[protocol.coverObjects.length - 1].tokens.noClaimAddress
+        const collateralAddress = protocol.coverObjects[protocol.coverObjects.length - 1].collateralAddress
         let collateralName;
         // currently supported collateral types are DAI and yDAI, however, purchasing coverage always uses DAI through Balancer
         const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F'
@@ -4986,7 +5086,7 @@ class Store {
 
         return {
           name,
-          expires,
+          expires: latestExpiry,
           claimAddress,
           noClaimAddress,
           purchaseCurrency: daiAddress,
